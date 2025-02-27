@@ -3,85 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Management</title>
+    <title>Database Manager</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
+
 <div class="container mt-5">
-    <h2 class="text-center">Data Management</h2>
+    <h2 class="text-center">Database Management System</h2>
     
-    <!-- Tabs -->
-    <ul class="nav nav-tabs" id="dataTabs">
+    <ul class="nav nav-tabs" id="myTabs">
         <li class="nav-item">
-            <a class="nav-link active" data-bs-toggle="tab" href="#reports">Reports Generation</a>
+            <a class="nav-link active" id="reports-tab" data-bs-toggle="tab" href="#reports">Reports Generation</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#database">Database Management</a>
+            <a class="nav-link" id="database-tab" data-bs-toggle="tab" href="#database">Database Management</a>
         </li>
     </ul>
 
-    <div class="tab-content mt-3">
-        <!-- Reports Generation Tab -->
-        <div class="tab-pane fade show active" id="reports">
+    <div class="tab-content mt-4">
+        <div id="reports" class="tab-pane fade show active">
             <h4>Download Reports</h4>
-            <ul class="list-group mb-3">
-                <li class="list-group-item">Monthly Depotwise Operation Details <button class="btn btn-sm btn-primary float-end" onclick="downloadReport('monthly_depotwise')">Download</button></li>
-                <li class="list-group-item">Areawise Operation Details <button class="btn btn-sm btn-primary float-end" onclick="downloadReport('areawise_operation')">Download</button></li>
-                <li class="list-group-item">Service Type wise Operation Details <button class="btn btn-sm btn-primary float-end" onclick="downloadReport('service_typewise')">Download</button></li>
-                <li class="list-group-item">Depotwise Bus Details <button class="btn btn-sm btn-primary float-end" onclick="downloadReport('depotwise_bus')">Download</button></li>
-                <li class="list-group-item">Overall Stop Details <button class="btn btn-sm btn-primary float-end" onclick="downloadReport('overall_stop')">Download</button></li>
-                <li class="list-group-item">Service area wise Stop Details <button class="btn btn-sm btn-primary float-end" onclick="downloadReport('service_area_stop')">Download</button></li>
-                <li class="list-group-item">BRT Corridor Details & Corridor wise route Details <button class="btn btn-sm btn-primary float-end" onclick="downloadReport('brt_corridor')">Download</button></li>
-                <li class="list-group-item">Schedulewise Kilometer, Revenue Details <button class="btn btn-sm btn-primary float-end" onclick="downloadReport('schedulewise_km_revenue')">Download</button></li>
-            </ul>
+            <select id="reportSelect" class="form-select mb-3">
+                <option selected disabled>Choose a report</option>
+                <option>Monthly Depotwise Operation Details</option>
+                <option>Areawise Operation Details</option>
+                <option>Service Type wise Operation Details</option>
+                <option>Depotwise Bus Details</option>
+                <option>Overall Stop Details</option>
+                <option>Service area wise Stop Details</option>
+                <option>BRT Corridor Details & Corridor wise route Details</option>
+                <option>Schedulewise Kilometer, Revenue Details</option>
+                <option>Stop wise Operation Details (Multiselection of Area (PMC,PCMC,PMRDA))</option>
+            </select>
+            <button class="btn btn-info" onclick="downloadReport()">Download</button>
         </div>
-        
-        <!-- Database Management Tab -->
-        <div class="tab-pane fade" id="database">
-            <h4>Download Sample Excel</h4>
-            <select id="downloadTableSelect" class="form-select mb-3">
-                <option selected disabled>Choose a table</option>
-            </select>
-            <button class="btn btn-info" onclick="downloadSample()">Download</button>
-            
-            <h4 class="mt-4">Upload Excel File</h4>
-            <form id="uploadForm" enctype="multipart/form-data" class="mb-4">
-                <select id="uploadTableSelect" name="table" class="form-select mb-3">
-                    <option selected disabled>Choose a table</option>
-                </select>
-                <input type="file" id="fileInput" name="file" class="form-control" required>
-                <button type="submit" class="btn btn-primary mt-2">Upload</button>
-            </form>
-            <div id="progress" class="text-center mt-3" style="display: none;">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Uploading...</span>
-                </div>
-                <p>Uploading...</p>
+
+        <div id="database" class="tab-pane fade">
+            <h4>Database Management</h4>
+            <div class="mt-4">
+                <h5>Download Sample Excel</h5>
+                <select id="downloadTableSelect" class="form-select mb-3"></select>
+                <button class="btn btn-info" onclick="downloadSample()">Download</button>
             </div>
-            
-            <h4 class="mt-4">View Table Data</h4>
-            <select id="tableSelect" class="form-select mb-3">
-                <option selected disabled>Choose a table</option>
-            </select>
-            <button class="btn btn-success" onclick="fetchTableData()">Show Data</button>
-            
-            <h4 class="mt-4">Table Data</h4>
-            <div id="tableData" class="table-responsive"></div>
+
+            <div class="mt-4">
+                <h5>Upload Excel File</h5>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <select id="uploadTableSelect" class="form-select mb-3"></select>
+                    <input type="file" id="fileInput" class="form-control" required>
+                    <button type="submit" class="btn btn-primary mt-2">Upload</button>
+                </form>
+                <div id="progress" class="text-center mt-3" style="display: none;">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Uploading...</p>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <h5>View Table Data</h5>
+                <select id="tableSelect" class="form-select mb-3"></select>
+                <button class="btn btn-success" onclick="fetchTableData()">Show Data</button>
+                <div class="mt-4">
+                    <h5>Table Data</h5>
+                    <div id="tableData" class="table-responsive"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
+    function downloadReport() {
+        let reportName = document.getElementById('reportSelect').value;
+        if (!reportName) return Swal.fire("Error", "Please select a report!", "error");
+        window.location.href = `/download_report/${reportName}`;
+    }
+    
     async function fetchTables() {
         const response = await fetch('/get_tables');
         const tables = await response.json();
-        populateSelect('tableSelect', tables);
-        populateSelect('uploadTableSelect', tables);
         populateSelect('downloadTableSelect', tables);
+        populateSelect('uploadTableSelect', tables);
+        populateSelect('tableSelect', tables);
     }
-
+    
     function populateSelect(selectId, tables) {
         const select = document.getElementById(selectId);
         select.innerHTML = '<option selected disabled>Choose a table</option>';
@@ -92,28 +99,46 @@
             select.appendChild(option);
         });
     }
-
+    
     async function fetchTableData() {
         let tableName = document.getElementById('tableSelect').value;
         if (!tableName) return Swal.fire("Error", "Please select a table!", "error");
-
         const response = await fetch(`/show_data/${tableName}`);
         const data = await response.text();
         document.getElementById('tableData').innerHTML = data;
     }
-
-    function downloadSample() {
-        let tableName = document.getElementById('downloadTableSelect').value;
-        if (!tableName) return Swal.fire("Error", "Please select a table!", "error");
-        window.location.href = `/download_sample/${tableName}`;
-    }
-
-    function downloadReport(reportName) {
-        window.location.href = `/download_report/${reportName}`;
-    }
+    
+    document.getElementById("uploadForm").addEventListener("submit", async function(event) {
+        event.preventDefault();
+        let tableName = document.getElementById("uploadTableSelect").value;
+        let fileInput = document.getElementById("fileInput");
+        if (!tableName || !fileInput.files.length) {
+            Swal.fire("Error", "Please select a table and choose a file!", "error");
+            return;
+        }
+        let formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+        let url = `/upload/${tableName}`;
+        document.getElementById("progress").style.display = "block";
+        try {
+            let response = await fetch(url, { method: "POST", body: formData });
+            let result = await response.json();
+            document.getElementById("progress").style.display = "none";
+            if (response.ok) {
+                Swal.fire({ title: "Success", text: `Inserted: ${result.inserted}, Skipped: ${result.skipped}`, icon: "success" });
+                document.getElementById("uploadForm").reset();
+            } else {
+                Swal.fire("Error", result.error, "error");
+            }
+        } catch (error) {
+            document.getElementById("progress").style.display = "none";
+            Swal.fire("Error", "Upload failed. Try again.", "error");
+        }
+    });
 
     fetchTables();
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
