@@ -15,10 +15,16 @@
     
     <ul class="nav nav-tabs" id="myTabs">
         <li class="nav-item">
-            <a class="nav-link active" id="reports-tab" data-bs-toggle="tab" href="#reports">Reports Generation</a>
+            <a class="nav-link" id="database-tab" data-bs-toggle="tab" href="#database">Database Management</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" id="database-tab" data-bs-toggle="tab" href="#database">Database Management</a>
+            <a class="nav-link" id="upi-tab" data-bs-toggle="tab" href="#upi">UPI Grievances</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="rto-tab" data-bs-toggle="tab" href="#rto">RTO Penalties Section</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" id="reports-tab" data-bs-toggle="tab" href="#reports">Reports Generation</a>
         </li>
     </ul>
 
@@ -35,7 +41,6 @@
                 <option>Service area wise Stop Details</option>
                 <option>BRT Corridor Details & Corridor wise route Details</option>
                 <option>Schedulewise Kilometer, Revenue Details</option>
-                <option>Stop wise Operation Details (Multiselection of Area (PMC,PCMC,PMRDA))</option>
             </select>
             <button class="btn btn-info" onclick="downloadReport()">Download</button>
         </div>
@@ -71,6 +76,16 @@
                 </div>
             </div>
         </div>
+
+        <div id="upi" class="tab-pane fade">
+            <h4>UPI Grievances</h4>
+            <p>Manage UPI payment-related grievances here.</p>
+        </div>
+
+        <div id="rto" class="tab-pane fade">
+            <h4>RTO Penalties Section</h4>
+            <p>Manage RTO penalties and related data here.</p>
+        </div>
     </div>
 </div>
 
@@ -98,6 +113,15 @@
             option.textContent = table;
             select.appendChild(option);
         });
+    }
+    
+    function downloadSample() {
+        let tableName = document.getElementById('downloadTableSelect').value;
+        if (!tableName) {
+            Swal.fire("Error", "Please select a table!", "error");
+            return;
+        }
+        window.location.href = `/download_sample/${tableName}`;
     }
     
     async function fetchTableData() {
