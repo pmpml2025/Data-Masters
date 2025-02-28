@@ -1,0 +1,46 @@
+/* Make the video cover the whole screen */
+#bg-video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: -1; /* Place behind other content */
+}
+
+/* Ensure content is visible */
+.content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Style the logo */
+.logo {
+    width: 150px; /* Adjust size */
+    height: auto;
+    display: block;
+    margin: 20px auto;
+}
+
+/* Overlay to add a white transparent effect */
+#video-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.45); /* Adjust transparency (0 = fully transparent, 1 = solid white) */
+    z-index: 0; /* Just above the video */
+}
+
+/* Ensure content appears above the overlay */
+.container {
+    position: relative;
+    z-index: 1; /* Higher than overlay */
+    background: rgba(255, 255, 255, 0.55); /* Optional: Adds slight background for readability */
+    padding: 20px;
+    border-radius: 10px;
+}
