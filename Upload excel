@@ -8,11 +8,11 @@ app = Flask(__name__)
 
 # Upload folder configuration
 UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER  
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)  # Ensure the folder exists
 
-# Database connection
-db_path = os.path.join(r"F:\Git\Data-Masters-1", "transit.db")
+# Updated database connection to use the uploaded file
+db_path = os.path.join(os.getcwd(), "transit_database.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -25,145 +25,91 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_columns(table_name):
-    query = text(f"PRAGMA table_info({table_name});")  # SQLite query to get column info
+    query = text(f"PRAGMA table_info({table_name});")
     with db.engine.connect() as connection:
         result = connection.execute(query).fetchall()
-    return [row[1] for row in result]  # Extract column names
+    return [row[1] for row in result]
+
+def get_table_names():
+    query = text("SELECT name FROM sqlite_master WHERE type='table';")
+    with db.engine.connect() as connection:
+        result = connection.execute(query).fetchall()
+    return [row[0] for row in result]
+
+def get_max_id(table_name, id_column):
+    query = text(f"SELECT MAX({id_column}) FROM {table_name}")
+    with db.engine.connect() as connection:
+        result = connection.execute(query).fetchone()
+    return (result[0] or 0) + 1
+
+def validate_foreign_keys(table_name, df):
+    foreign_keys = {
+        'Route_Master': [('brt_id', 'BRT_Master'), ('depot_id', 'Depot_Master')],
+    }
+    
+    if table_name in foreign_keys:
+        for fk_column, ref_table in foreign_keys[table_name]:
+            existing_ids = {row[0] for row in db.session.execute(text(f"SELECT DISTINCT {fk_column} FROM {ref_table}"))}
+            df = df[df[fk_column].isin(existing_ids)]
+    
+    return df
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# Route to get all table names dynamically
-@app.route('/get_tables')
+@app.route('/get_tables', methods=['GET'])
 def get_tables():
-    tables = get_table_names()
-    return jsonify(tables)
+    return jsonify(get_table_names())
 
-# Route to generate and download a sample Excel file for all tables
-@app.route('/download_sample/<table_name>')
-def download_sample(table_name):
-    columns = get_columns(table_name)
-    if not columns:
-        return f"Error: {table_name} table not found or has no columns."
+@app.route('/show_data/<table_name>', methods=['GET'])
+def show_data(table_name):
+    if table_name == "Choose a table":
+        return jsonify({"error": "Invalid table name selected"}), 400
     
-    sample_data = {col: ["SampleData"] for col in columns}
-    df = pd.DataFrame(sample_data)
-    file_path = os.path.join(app.config["UPLOAD_FOLDER"], f"sample_{table_name}.xlsx")
-    df.to_excel(file_path, index=False)
-    return send_file(file_path, as_attachment=True)
+    query = text(f"SELECT * FROM {table_name} LIMIT 100")
+    with db.engine.connect() as connection:
+        result = connection.execute(query)
+        data = result.fetchall()
+        columns = result.keys()
+    
+    return render_template("table.html", columns=columns, data=data)
+
 
 @app.route('/upload/<table_name>', methods=['POST'])
-def upload_data(table_name):
-    existing_tables = get_table_names()
-    if table_name not in existing_tables:
-        return jsonify({"error": "Invalid table name"}), 400
-
+def upload_file(table_name):
     if 'file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-
+        return jsonify({"error": "No file part"}), 400
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
-
-    if not allowed_file(file.filename):
-        return jsonify({"error": "Invalid file type. Please upload an Excel file."}), 400
-
-    file_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
-    file.save(file_path)
-
-    try:
-        result = insert_data(file_path, table_name)
-        if "error" in result:
-            return jsonify({"error": result["error"]}), 500
+    if file and allowed_file(file.filename):
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(file_path)
+        df = pd.read_excel(file_path)
+        columns = get_columns(table_name)
+        df = df[columns]  # Keep only valid columns
         
-        return jsonify({"success": f"{table_name} data uploaded successfully!", "inserted": result["inserted"], "skipped": result["skipped"]}), 200
-    except Exception as e:
-        return jsonify({"error": f"Upload failed: {str(e)}"}), 500
+        # Assign missing IDs
+        id_column = columns[0]  # Assuming first column is the primary key
+        if id_column in df.columns and df[id_column].isnull().any():
+            df[id_column] = range(get_max_id(table_name, id_column), get_max_id(table_name, id_column) + len(df))
+        
+        # Validate Foreign Keys
+        df = validate_foreign_keys(table_name, df)
+        
+        # Debugging: Print data before inserting
+        print("Inserting data into:", table_name)
+        print(df.head())
+        
+        try:
+            df.to_sql(table_name, con=db.engine, if_exists='append', index=False)
+            print("Data inserted successfully.")
+            return jsonify({"success": f"File uploaded. Inserted {len(df)} rows."})
+        except Exception as e:
+            print("Error inserting data:", str(e))
+            return jsonify({"error": str(e)}), 500
+    return jsonify({"error": "Invalid file format"}), 400
 
-
-import pandas as pd
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text, inspect
-
-def insert_data(file_path, table_name):
-    df = pd.read_excel(file_path)
-    df.columns = [col.strip() for col in df.columns]  # Remove extra spaces
-
-    existing_tables = get_table_names()
-    if table_name not in existing_tables:
-        print(f"Skipping: {table_name} table does not exist.")
-        return {"error": f"Table {table_name} does not exist."}
-
-    primary_key_column = get_primary_key(table_name)
-    if not primary_key_column:
-        return {"error": f"Primary key not found for table {table_name}."}
-
-    inserted_count = 0
-    skipped_count = 0
-
-    try:
-        with db.engine.begin() as connection:
-            for _, row in df.iterrows():
-                # Check if primary key already exists
-                check_query = text(f"SELECT 1 FROM {table_name} WHERE {primary_key_column} = :pk_value")
-                exists = connection.execute(check_query, {"pk_value": row[primary_key_column]}).fetchone()
-
-                if exists:
-                    skipped_count += 1  # Duplicate record found, skip it
-                    continue
-
-                # Prepare dynamic insert query
-                columns = ', '.join(row.index)
-                values = ', '.join([f":{col}" for col in row.index])
-                insert_query = text(f"INSERT INTO {table_name} ({columns}) VALUES ({values})")
-
-                connection.execute(insert_query, row.to_dict())
-                inserted_count += 1
-
-        return {"inserted": inserted_count, "skipped": skipped_count}
-
-    except IntegrityError as e:
-        return {"error": f"IntegrityError: {str(e)}"}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-from sqlalchemy import inspect
-def get_primary_key(table_name):
-    inspector = inspect(db.engine)
-    pk_constraint = inspector.get_pk_constraint(table_name)
-    primary_keys = pk_constraint.get("constrained_columns", [])  # Fetch primary key columns
-    return primary_keys[0] if primary_keys else None  # Return first primary key
-
-
-
-def get_table_names():
-    with db.engine.connect() as connection:
-        result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table';"))
-        return [row[0] for row in result]
-
-@app.route('/show_data/<table_name>')
-def show_data(table_name):
-    try:
-        result = db.session.execute(text(f"SELECT * FROM {table_name}"))
-        rows = result.fetchall()
-        if not rows:
-            return f"No data found in {table_name}"
-
-        table_html = "<table border='1' style='border-collapse: collapse; width: 100%;'>"
-        table_html += "<tr style='background-color: #f2f2f2;'>"
-        column_names = get_columns(table_name)
-        table_html += "".join(f"<th style='padding: 8px; border: 1px solid black;'>{col}</th>" for col in column_names)
-        table_html += "</tr>"
-        for row in rows:
-            table_html += "<tr>" + "".join(f"<td style='padding: 8px; border: 1px solid black;'>{cell}</td>" for cell in row) + "</tr>"
-        table_html += "</table>"
-        return table_html
-    except Exception as e:
-        return f"Error: {e}"
 if __name__ == '__main__':
     app.run(debug=True)
-    
-    
-    
