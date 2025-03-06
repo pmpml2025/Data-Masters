@@ -12,7 +12,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER  
 
 # Updated database connection to use the uploaded file
-db_path = os.path.join(os.getcwd(), "transit_database_new.db")
+db_path = os.path.join(os.getcwd(), "database/transit_database_new.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
