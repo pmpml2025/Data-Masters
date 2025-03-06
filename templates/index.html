@@ -1,23 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-
-<!-- Video Background -->
-<video autoplay muted loop id="bg-video">
-    <source src="{{ url_for('static', filename='back_vid_1.mp4') }}" type="video/mp4">
-    Your browser does not support the video tag.
-</video>
-<!-- White Overlay -->
-<div id="video-overlay"></div>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Database Manager</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+    
+    <!-- Video Background -->
+    <video autoplay muted loop id="bg-video">
+        <source src="{{ url_for('static', filename='back_vid_1.mp4') }}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <!-- White Overlay -->
+  <div id="video-overlay"></div>
 
 <div class="container mt-5">
     <div class="content text-center">
@@ -101,8 +102,16 @@
     </div>
 </div>
 
-
 <script>
+    function downloadReport() {
+        let reportName = document.getElementById('reportSelect').value;
+        if (reportName === "Choose a report") {
+            Swal.fire("Error", "Please select a report!", "error");
+            return;
+        }
+        window.location.href = `/download_report/${reportName}`;
+    }
+
     async function fetchTables() {
         try {
             const response = await fetch('/get_tables');
@@ -114,7 +123,6 @@
             console.error("Error fetching tables:", error);
         }
     }
-    
 
     function populateSelect(selectId, tables) {
         const select = document.getElementById(selectId);
@@ -128,24 +136,34 @@
     }
 
     function downloadSample() {
-        let tableName = document.getElementById('downloadTableSelect').value;
-        if (!tableName) {
-            Swal.fire("Error", "Please select a table!", "error");
+        let tableSelect = document.getElementById('downloadTableSelect');
+        
+        if (!tableSelect) {
+            alert("Error: Table selection dropdown not found!");
             return;
         }
-        window.location.href = `/download_sample/${tableName}`;
+    
+        let tableName = tableSelect.value;
+        if (!tableName) {
+            Swal.fire ? Swal.fire("Error", "Please select a table!", "error") : alert("Error: Please select a table!");
+            return;
+        }
+    
+        window.location.href = `/download_sample/${encodeURIComponent(tableName)}`;
     }
+    
+
     async function fetchTableData() {
         let tableName = document.getElementById('tableSelect').value;
-        if (!tableName || tableName === "Choose a table") {
-            Swal.fire("Error", "Please select a valid table!", "error");
+        if (!tableName) {
+            Swal.fire("Error", "Please select a table!", "error");
             return;
         }
         const response = await fetch(`/show_data/${tableName}`);
         const data = await response.text();
         document.getElementById('tableData').innerHTML = data;
     }
-    
+
     document.getElementById("uploadForm").addEventListener("submit", async function(event) {
         event.preventDefault();
         let tableName = document.getElementById("uploadTableSelect").value;
@@ -168,7 +186,7 @@
             document.getElementById("progress").style.display = "none";
 
             if (response.ok) {
-                Swal.fire("Success", `File uploaded successfully!`, "success");
+                Swal.fire("Success", `Inserted: ${result.inserted}, Skipped: ${result.skipped}`, "success");
                 document.getElementById("uploadForm").reset();
             } else {
                 Swal.fire("Error", result.error, "error");

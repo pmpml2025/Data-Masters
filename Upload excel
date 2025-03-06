@@ -12,7 +12,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER  
 
 # Updated database connection to use the uploaded file
-db_path = os.path.join(os.getcwd(), "transit_database.db")
+db_path = os.path.join(os.getcwd(), "transit_database_new.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -110,6 +110,20 @@ def upload_file(table_name):
             print("Error inserting data:", str(e))
             return jsonify({"error": str(e)}), 500
     return jsonify({"error": "Invalid file format"}), 400
+
+
+# Route to generate and download a sample Excel file for all tables
+@app.route('/download_sample/<table_name>')
+def download_sample(table_name):
+    columns = get_columns(table_name)
+    if not columns:
+        return f"Error: {table_name} table not found or has no columns."
+    
+    sample_data = {col: ["SampleData"] for col in columns}
+    df = pd.DataFrame(sample_data)
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], f"sample_{table_name}.xlsx")
+    df.to_excel(file_path, index=False)
+    return send_file(file_path, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
